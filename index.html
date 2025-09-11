@@ -1,405 +1,49 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Kruthika Hearts</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-  <meta name="color-scheme" content="dark light">
+  <meta charset="UTF-8">
+  <title>Unspoken Feelings</title>
   <style>
-    :root{
-      --bg:#0e1020; --panel:#151836; --ink:#f0f2ff; --muted:#aab1d7; --accent:#ff77b7; --gold:#ffd166;
+    body {
+      background-color: #f0f8ff;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 50px;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:radial-gradient(1400px 800px at 15% -10%, #1a1f45 0%, var(--bg) 60%);
-      color:var(--ink); font:16px/1.5 system-ui,Segoe UI,Roboto,Arial; display:grid; place-items:center; padding:14px;
+    h1 {
+      color: #4169e1;
+      font-size: 3em;
     }
-    .card{
-      width:100%; max-width:740px; background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
-      border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,.35); overflow:hidden;
+    p {
+      font-size: 1.2em;
+      color: #333;
+      max-width: 600px;
+      margin: auto;
     }
-    header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:rgba(255,119,183,.08); border-bottom:1px solid rgba(255,255,255,.08)}
-    h1{margin:0; font-size:18px; letter-spacing:.3px}
-    .tag{font-size:12px; color:var(--muted)}
-    .wrap{padding:14px 16px}
-    #hud{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px}
-    .chip{padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.14); color:var(--muted); background:rgba(255,255,255,.03)}
-    .btn{appearance:none; border:0; cursor:pointer; padding:10px 12px; border-radius:12px; background:linear-gradient(180deg,#ff8dc5,#ff5aa9); color:#1b0a16; font-weight:700; box-shadow:0 8px 18px rgba(255,119,183,.35)}
-    .btn.secondary{background:rgba(255,255,255,.06); color:var(--ink); border:1px solid rgba(255,255,255,.12); box-shadow:none}
-    canvas{width:100%; height:auto; background:linear-gradient(180deg,#0b0e22,#0a0d1a); border:1px solid rgba(255,255,255,.08); border-radius:12px}
-    #controls{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px}
-    #controls .btn{padding:12px 0}
-    .center{text-align:center}
-    .hidden{display:none !important}
+    .heart {
+      font-size: 5em;
+      color: crimson;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <header>
-      <h1>Kruthika Hearts</h1>
-      <span class="tag" id="status">Tap ▶ to start</span>
-    </header>
-
-    <section class="wrap">
-      <div id="hud">
-        <span class="chip">Score: <b id="score">0</b></span>
-        <span class="chip">Lives: <b id="lives">3</b></span>
-        <span class="chip">High: <b id="high">0</b></span>
-        <span class="chip" id="milestone">Catch her heart 💗</span>
-        <button class="btn" id="startBtn">▶ Start</button>
-        <button class="btn secondary" id="pauseBtn">⏸ Pause</button>
-        <button class="btn secondary" id="resetBtn">↺ Reset</button>
-      </div>
-
-      <canvas id="game" width="720" height="420" aria-label="Game area"></canvas>
-
-      <div id="controls">
-        <button class="btn secondary" id="leftBtn">⟵</button>
-        <button class="btn" id="jumpBtn">⤴ Jump</button>
-        <button class="btn secondary" id="rightBtn">⟶</button>
-      </div>
-
-      <p class="center" style="color:var(--muted); font-size:13px; margin-top:8px">
-        Move with ⬅ ➡ or touch. Catch hearts, avoid shards. Secret: type “kruthika” ✨
-      </p>
-    </section>
-  </div>
-
-  <script>
-    // Helpers
-    const $ = id => document.getElementById(id);
-    const canvas = $('game'), ctx = canvas.getContext('2d');
-    const dpi = Math.min(2, window.devicePixelRatio || 1);
-    // Scale canvas for crispness
-    function fixDpi(){
-      const styleHeight = +getComputedStyle(canvas).getPropertyValue("height").slice(0,-2);
-      const styleWidth  = +getComputedStyle(canvas).getPropertyValue("width").slice(0,-2);
-      canvas.width = styleWidth * dpi; canvas.height = styleHeight * dpi;
-      ctx.setTransform(dpi,0,0,dpi,0,0);
-    }
-    fixDpi(); addEventListener('resize', fixDpi);
-
-    // Game state
-    let running = false, paused = false, sparkle = false, keyBuffer = '';
-    const state = {
-      score: 0, lives: 3, high: +(localStorage.getItem('kh.high')||0),
-      t: 0, speed: 2, spawn: 0, gravity: 0.35
-    };
-
-    // Player
-    const player = {
-      x: canvas.clientWidth/2, y: canvas.clientHeight-40, w: 46, h: 16,
-      vx: 0, onGround: true
-    };
-
-    // Entities
-    const hearts = []; // {x,y,r,vy,type} type: 'heart' or 'shard'
-
-    // Controls
-    let left=false, right=false;
-    document.addEventListener('keydown', e=>{
-      if (e.key==='ArrowLeft' || e.key==='a') left=true;
-      if (e.key==='ArrowRight'|| e.key==='d') right=true;
-      if (e.key===' ' || e.key==='ArrowUp' || e.key==='w') jump();
-      // Secret sequence
-      const ch = (e.key||'').toLowerCase();
-      if (/[a-z]/.test(ch)) {
-        keyBuffer = (keyBuffer + ch).slice(-8);
-        if (keyBuffer.endsWith('kruthika')) {
-          sparkle = !sparkle;
-          flash('Sparkle mode ' + (sparkle?'on ✨':'off'));
-        }
-      }
-      if (e.key==='p') togglePause();
-    });
-    document.addEventListener('keyup', e=>{
-      if (e.key==='ArrowLeft' || e.key==='a') left=false;
-      if (e.key==='ArrowRight'|| e.key==='d') right=false;
-    });
-
-    // Touch buttons
-    $('leftBtn').onpointerdown = ()=>left=true;
-    $('leftBtn').onpointerup = $('leftBtn').onpointerleave = ()=>left=false;
-    $('rightBtn').onpointerdown = ()=>right=true;
-    $('rightBtn').onpointerup = $('rightBtn').onpointerleave = ()=>right=false;
-    $('jumpBtn').onclick = jump;
-
-    $('startBtn').onclick = start;
-    $('pauseBtn').onclick = togglePause;
-    $('resetBtn').onclick = reset;
-
-    function start(){
-      if (running) return;
-      running = true; paused = false;
-      $('status').textContent = 'Catching hearts...';
-      loop(0);
-    }
-    function togglePause(){
-      if (!running) return;
-      paused = !paused;
-      $('status').textContent = paused ? 'Paused' : 'Catching hearts...';
-      if (!paused) requestAnimationFrame(loop);
-    }
-    function reset(){
-      running=false; paused=false;
-      state.score=0; state.lives=3; state.t=0; state.speed=2; state.spawn=0;
-      hearts.length=0;
-      player.x = canvas.clientWidth/2; player.y = canvas.clientHeight-40; player.vx=0; player.onGround=true;
-      $('score').textContent=0; $('lives').textContent=3; $('milestone').textContent='Catch her heart 💗';
-      $('status').textContent='Tap ▶ to start';
-      draw(); // refresh
-    }
-
-    function jump(){
-      if (player.onGround){
-        player.onGround=false;
-        player.vx *= 0.9;
-        // jump by moving up a bit; use vy stored on object
-        player.vy = -7.8;
-      }
-    }
-
-    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-
-    // Spawn hearts and shards
-    function spawnThing(){
-      const type = Math.random() < Math.min(0.8, 0.6 + state.score/100) ? 'heart' : 'shard';
-      const r = type==='heart' ? 10+Math.random()*10 : 8+Math.random()*8;
-      hearts.push({
-        x: 20 + Math.random()*(canvas.clientWidth-40),
-        y: -20, r, vy: 1.5 + Math.random()*state.speed, type
-      });
-    }
-
-    function update(dt){
-      // Player horizontal
-      const accel = 0.7;
-      if (left && !right) player.vx -= accel;
-      if (right && !left) player.vx += accel;
-      player.vx *= 0.92;
-      player.x += player.vx;
-      player.x = clamp(player.x, 20, canvas.clientWidth-20);
-
-      // Jump/Gravity
-      if (!player.onGround){
-        player.vy += state.gravity;
-        player.y += player.vy;
-        if (player.y >= canvas.clientHeight-40){
-          player.y = canvas.clientHeight-40;
-          player.vy = 0; player.onGround = true;
-        }
-      }
-
-      // Spawn cadence
-      state.spawn -= dt;
-      if (state.spawn <= 0){
-        spawnThing();
-        state.spawn = Math.max(220 - state.score*2, 60); // faster with score
-      }
-
-      // Move entities
-      for (let i=hearts.length-1;i>=0;i--){
-        const h = hearts[i];
-        h.vy += 0.002*state.speed;
-        h.y += h.vy;
-        // Collision with player paddle area
-        if (h.y + h.r >= player.y && h.y - h.r <= player.y + player.h){
-          if (Math.abs(h.x - player.x) < (player.w/2 + h.r)){
-            if (h.type==='heart'){
-              score(1);
-              puff(h.x, h.y, '#ff77b7');
-            }else{
-              hurt();
-              puff(h.x, h.y, '#66e2ff');
-            }
-            hearts.splice(i,1);
-            continue;
-          }
-        }
-        // Off screen
-        if (h.y - h.r > canvas.clientHeight){
-          if (h.type==='heart') miss();
-          hearts.splice(i,1);
-        }
-      }
-    }
-
-    function score(n){
-      state.score += n;
-      $('score').textContent = state.score;
-      state.speed = 2 + Math.min(5, state.score/12);
-      milestones();
-      if (state.score > state.high){
-        state.high = state.score;
-        localStorage.setItem('kh.high', state.high);
-        $('high').textContent = state.high;
-      }
-    }
-    function miss(){
-      // soft penalty
-      if (state.score>0) score(-1);
-    }
-    function hurt(){
-      state.lives--;
-      $('lives').textContent = state.lives;
-      shake();
-      if (state.lives<=0) gameOver();
-    }
-
-    function gameOver(){
-      running=false;
-      $('status').textContent='Game over. Press ▶ to try again.';
-      flash('Game over 💔');
-    }
-
-    // Milestones with sweet messages
-    function milestones(){
-      const m = $('milestone');
-      const s = state.score;
-      if (s>=1 && s<5) m.textContent = 'First heart caught. She smiled in your head. 😊';
-      else if (s>=5 && s<10) m.textContent = 'You’re learning her rhythm. 🎵';
-      else if (s>=10 && s<15) m.textContent = 'Every heart says “hi, Star.” ✨';
-      else if (s>=15 && s<25) m.textContent = 'Carry her gently. You’re doing great. 💗';
-      else if (s>=25 && s<40) m.textContent = 'The world fades, her name glows. 🌸';
-      else if (s>=40) m.textContent = 'Endless hearts. Endless care. ♾️';
-    }
-
-    // FX
-    const particles = [];
-    function puff(x,y,color){
-      for (let i=0;i<10;i++){
-        particles.push({x,y, vx:(Math.random()-0.5)*3, vy:(Math.random()-0.8)*3, a:1, color});
-      }
-    }
-    function shake(){
-      // temporary screen shake
-      screenShake = 10;
-    }
-    let screenShake = 0;
-    function flash(text){
-      overlay.text = text; overlay.a = 1;
-    }
-    const overlay = {text:'', a:0};
-
-    function drawHeart(x,y,r,fill){
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.fillStyle = fill;
-      ctx.beginPath();
-      const s = r/12;
-      ctx.moveTo(0,-3*s);
-      ctx.bezierCurveTo(3*s,-6*s,8*s,-3*s,8*s,2*s);
-      ctx.bezierCurveTo(8*s,6*s,4*s,9*s,0,12*s);
-      ctx.bezierCurveTo(-4*s,9*s,-8*s,6*s,-8*s,2*s);
-      ctx.bezierCurveTo(-8*s,-3*s,-3*s,-6*s,0,-3*s);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    function draw(){
-      let ox=0, oy=0;
-      if (screenShake>0){ ox=(Math.random()-0.5)*6; oy=(Math.random()-0.5)*6; screenShake--; }
-      ctx.save(); ctx.translate(ox,oy);
-      // background gradient stars
-      ctx.clearRect(-100,-100,canvas.clientWidth+200,canvas.clientHeight+200);
-      // faint stars
-      for (let i=0;i<30;i++){
-        const x = (i*53 + (state.t*0.03)) % canvas.clientWidth;
-        const y = (i*97) % canvas.clientHeight;
-        ctx.fillStyle = 'rgba(255,255,255,.08)';
-        ctx.fillRect(x,y,2,2);
-      }
-
-      // Player (paddle)
-      const grd = ctx.createLinearGradient(player.x-30,player.y-10,player.x+30,player.y+10);
-      grd.addColorStop(0,'#ff8dc5'); grd.addColorStop(1,'#ff5aa9');
-      ctx.fillStyle = grd;
-      ctx.fillRect(player.x - player.w/2, player.y, player.w, player.h);
-      // Tiny heart emblem
-      drawHeart(player.x, player.y-8, 8, '#ffd1e8');
-
-      // Entities
-      hearts.forEach(h=>{
-        if (h.type==='heart') drawHeart(h.x,h.y,h.r,'#ff77b7');
-        else {
-          ctx.fillStyle = '#66e2ff';
-          ctx.beginPath(); ctx.moveTo(h.x, h.y-h.r);
-          ctx.lineTo(h.x+h.r*0.6, h.y+h.r); ctx.lineTo(h.x-h.r*0.6, h.y+h.r); ctx.closePath(); ctx.fill();
-        }
-      });
-
-      // Particles
-      for (let i=particles.length-1;i>=0;i--){
-        const p=particles[i];
-        p.x+=p.vx; p.y+=p.vy; p.a-=0.03;
-        if (sparkle) { p.vx*=1.02; p.vy*=1.02; }
-        ctx.fillStyle = p.color.replace(')',','+Math.max(0,p.a)+')').replace('#','rgba(') // quick fade hack for #rrggbb won't work
-        // fallback: draw glow as circle
-        ctx.globalAlpha = Math.max(0,p.a);
-        ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill(); ctx.globalAlpha=1;
-        if (p.a<=0) particles.splice(i,1);
-      }
-
-      // Overlay
-      if (overlay.a>0 && overlay.text){
-        ctx.globalAlpha = overlay.a;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 22px system-ui,Segoe UI';
-        ctx.textAlign='center';
-        ctx.fillText(overlay.text, canvas.clientWidth/2, canvas.clientHeight/2);
-        ctx.globalAlpha = 1;
-        overlay.a -= 0.02;
-      }
-
-      ctx.restore();
-    }
-
-    let last=0;
-    function loop(ts){
-      if (!running) return;
-      if (paused){ draw(); return; }
-      const dt = Math.min(50, ts-last || 16); last = ts;
-      state.t += dt;
-      update(dt);
-      draw();
-      requestAnimationFrame(loop);
-    }
-
-    // Initialize
-    $('high').textContent = state.high;
-    reset(); // sets the initial view
-  <// Cheat code: kruthika+love
-document.addEventListener('keydown', e => {
-  const ch = (e.key || '').toLowerCase();
-  if (/[a-z+]/.test(ch)) {
-    keyBuffer = (keyBuffer + ch).slice(-14);
-    if (keyBuffer === 'kruthika+love') {
-      state.lives = Infinity;
-      cheatMode = true;
-      flash('Cheat activated 💛 Infinite lives + golden hearts');
-    }
-  }
-});
-
-// Modify heart drawing if cheatMode is on
-let cheatMode = false;
-function drawHeart(x, y, r, fill) {
-  if (cheatMode) fill = '#ffd166'; // golden hearts
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  const s = r / 12;
-  ctx.moveTo(0, -3 * s);
-  ctx.bezierCurveTo(3 * s, -6 * s, 8 * s, -3 * s, 8 * s, 2 * s);
-  ctx.bezierCurveTo(8 * s, 6 * s, 4 * s, 9 * s, 0, 12 * s);
-  ctx.bezierCurveTo(-4 * s, 9 * s, -8 * s, 6 * s, -8 * s, 2 * s);
-  ctx.bezierCurveTo(-8 * s, -3 * s, -3 * s, -6 * s, 0, -3 * s);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}>
+  <h1>💙 Vybhoohith & Kruthika 💙</h1>
+  <p>
+    Ninth grade. Two classrooms. 9A and 9B.<br>
+    Vybhoohith, just 13, sat in 9B, quietly watching the girl in 9A—Kruthika.<br>
+    He never said hi. Never spoke a word. But in his heart, she was everything.
+  </p>
+  <div class="heart">💓</div>
+  <p>
+    Every time she walked by, his world paused. Her smile, her voice, even from a distance, felt like sunshine.<br>
+    He didn’t know how to say it. So he wrote this page, hoping one day she might read it and understand.<br>
+    That even silence can carry love.
+  </p>
 </body>
 </html>

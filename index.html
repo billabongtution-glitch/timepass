@@ -370,6 +370,36 @@
     // Initialize
     $('high').textContent = state.high;
     reset(); // sets the initial view
-  </script>
+  <// Cheat code: kruthika+love
+document.addEventListener('keydown', e => {
+  const ch = (e.key || '').toLowerCase();
+  if (/[a-z+]/.test(ch)) {
+    keyBuffer = (keyBuffer + ch).slice(-14);
+    if (keyBuffer === 'kruthika+love') {
+      state.lives = Infinity;
+      cheatMode = true;
+      flash('Cheat activated 💛 Infinite lives + golden hearts');
+    }
+  }
+});
+
+// Modify heart drawing if cheatMode is on
+let cheatMode = false;
+function drawHeart(x, y, r, fill) {
+  if (cheatMode) fill = '#ffd166'; // golden hearts
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  const s = r / 12;
+  ctx.moveTo(0, -3 * s);
+  ctx.bezierCurveTo(3 * s, -6 * s, 8 * s, -3 * s, 8 * s, 2 * s);
+  ctx.bezierCurveTo(8 * s, 6 * s, 4 * s, 9 * s, 0, 12 * s);
+  ctx.bezierCurveTo(-4 * s, 9 * s, -8 * s, 6 * s, -8 * s, 2 * s);
+  ctx.bezierCurveTo(-8 * s, -3 * s, -3 * s, -6 * s, 0, -3 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}>
 </body>
 </html>

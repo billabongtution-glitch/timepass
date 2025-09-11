@@ -1,374 +1,46 @@
- <!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Secret Diary</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
-  <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #151935;
-      --ink: #e8ebff;
-      --muted: #a7b0d6;
-      --accent: #7c9cff;
-      --ok: #4ade80;
-      --warn: #fbbf24;
-      --danger: #f87171;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 14px;
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-      background: radial-gradient(1200px 800px at 20% -10%, #1a1f45 0%, var(--bg) 55%) fixed;
-      color: var(--ink);
-      display: grid;
-      place-items: center;
-      padding: 16px;
-    }
-    .card {
-      width: 100%;
-      max-width: 720px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    header {
-      padding: 16px 18px;
-      display: flex; align-items: center; justify-content: space-between;
-      background: rgba(124,156,255,.08);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
-    header .tag { font-size: 12px; color: var(--muted); }
-    .wrap { padding: 18px; }
-    .stack { display: grid; gap: 12px; }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .grow { flex: 1; min-width: 140px; }
-    label { font-size: 13px; color: var(--muted); }
-    input[type="password"], input[type="text"], select, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(10,14,36,.6);
-      color: var(--ink);
-      outline: none;
-      transition: border-color .15s ease, background .15s ease;
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-      background: rgba(10,14,36,.8);
-    }
-    textarea {
-      min-height: 220px;
-      resize: vertical;
-      line-height: 1.6;
-    }
-    .hint { font-size: 12px; color: var(--muted); }
-    .status { font-size: 12px; color: var(--muted); }
-    .chip {
-      padding: 6px 10px; border-radius: 999px; font-size: 12px;
-      border: 1px solid rgba(255,255,255,.14); color: var(--muted);
-      background: rgba(255,255,255,.03);
-    }
-    .btn {
-      appearance: none; border: 0; cursor: pointer;
-      padding: 12px 14px; border-radius: 12px;
-      background: linear-gradient(180deg, #8aa4ff, #6f88ff);
-      color: #0a0e24; font-weight: 700; letter-spacing: .3px;
-      box-shadow: 0 8px 18px rgba(124,156,255,.35);
-      transition: transform .05s ease, filter .15s ease;
-    }
-    .btn:active { transform: translateY(1px) scale(.995); }
-    .btn.secondary { background: rgba(255,255,255,.06); color: var(--ink); box-shadow: none; border: 1px solid rgba(255,255,255,.12); }
-    .danger { color: var(--danger); }
-    .ok { color: var(--ok); }
-    .center { text-align: center; }
-    .hidden { display: none !important; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 520px) {
-      header { flex-direction: column; align-items: flex-start; gap: 4px; }
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brick Breaker</title>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #333; color: #fff; font-family: Arial, sans-serif; }
+        canvas { background: #000; border: 1px solid #fff; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <header>
-      <h1>Secret Diary</h1>
-      <span class="tag" id="saveStatus">Not saved</span>
-    </header>
 
-    <!-- LOCK VIEW -->
-    <section id="lockView" class="wrap">
-      <div class="stack">
-        <div class="center">
-          <div class="chip" id="lockHint">Set a new 4‑digit PIN to begin</div>
-        </div>
+<canvas id="gameCanvas" width="480" height="320"></canvas>
 
-        <div id="setupGroup" class="stack">
-          <div>
-            <label for="newPin">New PIN</label>
-            <input id="newPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="****" autocomplete="new-password" />
-          </div>
-          <div>
-            <label for="confirmPin">Confirm PIN</label>
-            <input id="confirmPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="****" autocomplete="new-password" />
-          </div>
-          <button class="btn" id="setPinBtn">Set PIN</button>
-          <div class="hint">Your PIN is stored only on this device (localStorage). Don’t forget it.</div>
-        </div>
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-        <div id="unlockGroup" class="stack hidden">
-          <div>
-            <label for="unlockPin">Enter PIN</label>
-            <input id="unlockPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="****" autocomplete="current-password" />
-          </div>
-          <div class="row">
-            <button class="btn grow" id="unlockBtn">Unlock</button>
-            <button class="btn secondary" id="resetBtn" title="Clear PIN and diary (danger)">Reset</button>
-          </div>
-          <div class="hint">Forgot your PIN? Reset clears everything.</div>
-        </div>
-      </div>
-    </section>
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 2;
+    let dy = -2;
+    const ballRadius = 10;
 
-    <!-- DIARY VIEW -->
-    <section id="diaryView" class="wrap hidden">
-      <div class="stack">
-        <div class="grid-2">
-          <div>
-            <label for="mood">Mood</label>
-            <select id="mood">
-              <option value="🙂">🙂 Calm</option>
-              <option value="😄">😄 Happy</option>
-              <option value="🤔">🤔 Curious</option>
-              <option value="😌">😌 Peaceful</option>
-              <option value="😴">😴 Tired</option>
-              <option value="😕">😕 Confused</option>
-              <option value="😢">😢 Sad</option>
-              <option value="🔥">🔥 Determined</option>
-            </select>
-          </div>
-          <div>
-            <label for="title">Title</label>
-            <input id="title" type="text" placeholder="A tiny headline for today..." />
-          </div>
-        </div>
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
 
-        <div>
-          <label for="entry">Your entry</label>
-          <textarea id="entry" placeholder="Write anything. It autosaves."></textarea>
-          <div class="row" style="justify-content: space-between;">
-            <span class="status" id="metaInfo">0 chars</span>
-            <span class="status">Last saved: <span id="lastSaved">never</span></span>
-          </div>
-        </div>
+    const rightPressed = false;
+    const leftPressed = false;
 
-        <div class="row">
-          <button class="btn" id="exportBtn">Export (.json)</button>
-          <label class="btn secondary" for="importFile" style="cursor:pointer;">Import</label>
-          <input id="importFile" type="file" accept="application/json" class="hidden" />
-          <button class="btn secondary" id="lockBtn">Lock</button>
-        </div>
-      </div>
-    </section>
-  </div>
+    const brickRowCount = 3;
+    const brickColumnCount = 5;
+    const brickWidth = 75;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 30;
 
-  <script>
-    // Simple local "hash" to avoid storing raw PIN plainly (not cryptographically secure)
-    const fakeHash = s => btoa(unescape(encodeURIComponent('sd:' + s.split('').reverse().join('') + ':x')));
-
-    const el = id => document.getElementById(id);
-    const lockView   = el('lockView');
-    const diaryView  = el('diaryView');
-    const saveStatus = el('saveStatus');
-    const lockHint   = el('lockHint');
-
-    const setupGroup   = el('setupGroup');
-    const unlockGroup  = el('unlockGroup');
-    const setPinBtn    = el('setPinBtn');
-    const resetBtn     = el('resetBtn');
-    const unlockBtn    = el('unlockBtn');
-
-    const newPin     = el('newPin');
-    const confirmPin = el('confirmPin');
-    const unlockPin  = el('unlockPin');
-
-    const mood   = el('mood');
-    const title  = el('title');
-    const entry  = el('entry');
-    const lastSaved = el('lastSaved');
-    const metaInfo  = el('metaInfo');
-    const exportBtn = el('exportBtn');
-    const importFile= el('importFile');
-    const lockBtn   = el('lockBtn');
-
-    const KEYS = {
-      pin: 'sd.pin',
-      diary: 'sd.data'
-    };
-
-    function hasPin() {
-      return !!localStorage.getItem(KEYS.pin);
-    }
-
-    function renderLock() {
-      lockView.classList.remove('hidden');
-      diaryView.classList.add('hidden');
-
-      if (hasPin()) {
-        setupGroup.classList.add('hidden');
-        unlockGroup.classList.remove('hidden');
-        lockHint.textContent = 'Enter your PIN to unlock';
-      } else {
-        setupGroup.classList.remove('hidden');
-        unlockGroup.classList.add('hidden');
-        lockHint.textContent = 'Set a new 4‑digit PIN to begin';
-      }
-      saveStatus.textContent = 'Locked';
-    }
-
-    function renderDiary() {
-      lockView.classList.add('hidden');
-      diaryView.classList.remove('hidden');
-      loadDiary();
-      touchSaved('Unlocked');
-    }
-
-    function touchSaved(state='Saved') {
-      saveStatus.textContent = state;
-      lastSaved.textContent = new Date().toLocaleString();
-    }
-
-    function saveDiary() {
-      const data = {
-        mood: mood.value,
-        title: title.value,
-        entry: entry.value,
-        updatedAt: Date.now()
-      };
-      localStorage.setItem(KEYS.diary, JSON.stringify(data));
-      touchSaved('Saved');
-    }
-
-    function loadDiary() {
-      const raw = localStorage.getItem(KEYS.diary);
-      if (!raw) { metaInfo.textContent = '0 chars'; return; }
-      try {
-        const data = JSON.parse(raw);
-        mood.value = data.mood || '🙂';
-        title.value = data.title || '';
-        entry.value = data.entry || '';
-        metaInfo.textContent = (entry.value || '').length + ' chars';
-        if (data.updatedAt) lastSaved.textContent = new Date(data.updatedAt).toLocaleString();
-      } catch { /* ignore */ }
-    }
-
-    // Debounced autosave
-    let t;
-    function queueSave() {
-      saveStatus.textContent = 'Saving...';
-      clearTimeout(t);
-      t = setTimeout(saveDiary, 400);
-      metaInfo.textContent = (entry.value || '').length + ' chars';
-    }
-
-    // PIN setup
-    setPinBtn?.addEventListener('click', () => {
-      const a = (newPin.value || '').trim();
-      const b = (confirmPin.value || '').trim();
-      if (!/^\d{4}$/.test(a)) { alert('PIN must be exactly 4 digits.'); return; }
-      if (a !== b) { alert('PINs do not match.'); return; }
-      localStorage.setItem(KEYS.pin, fakeHash(a));
-      newPin.value = confirmPin.value = '';
-      renderLock();
-      alert('PIN set. You can now unlock.');
-    });
-
-    // Unlock
-    unlockBtn?.addEventListener('click', () => {
-      const p = (unlockPin.value || '').trim();
-      const stored = localStorage.getItem(KEYS.pin);
-      if (stored && stored === fakeHash(p)) {
-        unlockPin.value = '';
-        renderDiary();
-      } else {
-        alert('Incorrect PIN.');
-      }
-    });
-
-    // Reset everything (danger)
-    resetBtn?.addEventListener('click', () => {
-      if (confirm('This will CLEAR your PIN and diary. Continue?')) {
-        localStorage.removeItem(KEYS.pin);
-        localStorage.removeItem(KEYS.diary);
-        renderLock();
-      }
-    });
-
-    // Autosave events
-    [mood, title, entry].forEach(ctrl => {
-      ctrl?.addEventListener('input', queueSave);
-      ctrl?.addEventListener('change', queueSave);
-    });
-
-    // Export / Import
-    exportBtn?.addEventListener('click', () => {
-      const raw = localStorage.getItem(KEYS.diary) || JSON.stringify({mood: mood.value, title: title.value, entry: entry.value, updatedAt: Date.now()});
-      const blob = new Blob([raw], {type: 'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'secret-diary.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-
-    importFile?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if (!('entry' in data)) throw new Error('Invalid file');
-        localStorage.setItem(KEYS.diary, JSON.stringify(data));
-        loadDiary();
-        touchSaved('Imported');
-      } catch (err) {
-        alert('Import failed. Make sure it is a valid diary export.');
-      } finally {
-        e.target.value = '';
-      }
-    });
-
-    // Lock button
-    lockBtn?.addEventListener('click', renderLock);
-
-    // Init
-    renderLock();
-  </script>
-// Hidden triple-tap unlock via title field
-let tapCount = 0;
-let tapTimer;
-
-title?.addEventListener('click', () => {
-  tapCount++;
-  clearTimeout(tapTimer);
-  tapTimer = setTimeout(() => tapCount = 0, 600); // reset after 600ms
-
-  if (tapCount === 3 && hasPin()) {
-    const stored = localStorage.getItem(KEYS.pin);
-    if (stored) {
-      renderDiary();
-      tapCount = 0;
-    }
-  }
-});
-</body>
-</html>
+    const bricks = [];
+    for (let c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < brickRowCount; r++) {
+            bricks[c[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/LesterNJ/brick-breaker/tree/32c667e278ea524971ff0d53cbeecf5bf3d4b93c/index.js?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "1")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/mekcherie/Breakout-Tutorial-/tree/fc8d951b65f7ed97c5cf3393dd48a5551612e3b4/script.js?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "2")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/LaMalvenue/anais-rouviere.fr/tree/6e05d52524da07c3c006918e1199a6bff999ff04/js%2Fscript-casse-briques.js?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "3")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/reikamoon/breakout_tutorial/tree/40594c8d9a81264774211b59a1eb51cd1168d3bc/src%2Fclasses.js?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "4")
+       
